@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="tr-TR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Ürünler - Kahve Yanı Admin</title>
+  <link rel="stylesheet" href="../styles/admin.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Lato:wght@300;400;700&display=swap">
+  <link rel="stylesheet" href="../styles/admin-fixes.css">
+  <link rel="icon" type="image/svg+xml" href="../assets/template/favicon.svg">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="x-supabase-url" content="https://qkuhxshusqwdqtsyknoq.supabase.co">
+  <meta name="x-supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFrdWh4c2h1c3F3ZHF0c3lrbm9xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0Njc1NzcsImV4cCI6MjA5MDA0MzU3N30.iGVeTVjE6TPHPaGjP5NPSKn0MfaU4c9rkLzmZx0rlRI">
+</head>
+<body style="background:#0f0e0d;">
+
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar__logo">
+      <img src="../assets/template/logo-kahveyani.svg" alt="Kahve Yanı" style="height:32px;width:auto;">
+    </div>
+    <nav class="admin-nav">
+      <a href="/admin/index.html" class="admin-nav__item">Genel Bakış</a>
+      <a href="/admin/products.html" class="admin-nav__item active">Ürünler</a>
+      <a href="/admin/orders.html" class="admin-nav__item">Siparişler</a>
+      <a href="../index.html" class="admin-nav__item" target="_blank">Siteye Git ↗</a>
+    </nav>
+    <button onclick="AdminAuth.signOut()" class="admin-nav__signout">Çıkış Yap</button>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-header">
+      <h1>Ürünler</h1>
+      <button class="btn-primary" onclick="openAddModal()" style="padding:10px 20px;font-size:0.875em;">
+        + Yeni Ürün
+      </button>
+    </div>
+
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th style="width:64px;">Görsel</th>
+            <th>Ürün Adı</th>
+            <th>Slug</th>
+            <th>Fiyat</th>
+            <th>Stok</th>
+            <th>Durum</th>
+            <th style="width:120px;">İşlem</th>
+          </tr>
+        </thead>
+        <tbody id="products-body">
+          <tr><td colspan="7" style="text-align:center;color:rgba(255,255,255,0.3);">Yükleniyor...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<!-- Add/Edit Modal -->
+<div id="product-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1000;overflow-y:auto;">
+  <div style="max-width:560px;margin:40px auto;background:#1a1917;border:1px solid rgba(255,255,255,0.1);padding:32px;">
+    <h2 id="modal-title" style="font-family:'Dala Moa',serif;color:#c8a96e;margin-bottom:24px;">Yeni Ürün</h2>
+    <form id="product-form" onsubmit="saveProduct(event)">
+      <input type="hidden" id="product-id">
+      <div class="form-group">
+        <label>Ürün Adı *</label>
+        <input type="text" id="p-name" required placeholder="Örn: Sütlü Çikolata">
+      </div>
+      <div class="form-group">
+        <label>Slug * <small style="color:rgba(255,255,255,0.3);">(URL'de kullanılır)</small></label>
+        <input type="text" id="p-slug" required placeholder="sutlu-cikolata" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'-')">
+      </div>
+      <div class="form-group">
+        <label>Alt Başlık</label>
+        <input type="text" id="p-subtitle" placeholder="Örn: 100g tablet">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fiyat (TL) *</label>
+          <input type="number" id="p-price" required step="0.01" min="0" placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label>Stok</label>
+          <input type="number" id="p-stock" value="0" min="0" placeholder="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Açıklama</label>
+        <textarea id="p-description" rows="4" placeholder="Ürün açıklaması..." style="resize:vertical;"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Kategori</label>
+        <input type="text" id="p-category" placeholder="Örn: Tablet, Pralin, Hediye">
+      </div>
+      <div class="form-group">
+        <label>Görseller</label>
+        <div id="current-images" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;"></div>
+        <input type="file" id="p-images" accept="image/*" multiple
+          style="color:rgba(255,255,255,0.7);font-family:'Sneak',sans-serif;font-size:0.875em;">
+        <p style="color:rgba(255,255,255,0.3);font-family:'Sneak',sans-serif;font-size:0.75em;margin-top:6px;">
+          JPG veya PNG, maks. 5MB. Birden fazla dosya seçebilirsiniz.
+        </p>
+      </div>
+      <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+        <label style="margin:0;">Aktif</label>
+        <label class="toggle">
+          <input type="checkbox" id="p-active" checked>
+          <span class="toggle__slider"></span>
+        </label>
+      </div>
+
+      <div id="product-form-error" style="display:none;color:#ff6b6b;font-family:'Sneak',sans-serif;font-size:0.875em;padding:10px;margin-bottom:16px;border:1px solid rgba(255,100,100,0.3);"></div>
+
+      <div style="display:flex;gap:12px;margin-top:24px;">
+        <button type="submit" class="btn-primary" id="save-btn" style="flex:1;padding:12px;">Kaydet</button>
+        <button type="button" class="btn-outline" onclick="closeModal()" style="padding:12px 24px;">İptal</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="admin.js"></script>
+<script>
+let editingProduct = null;
+let existingImages = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await AdminAuth.requireAuth();
+  loadProducts();
+});
+
+async function loadProducts() {
+  try {
+    const products = await AdminAPI.get('/api/products?all=1');
+    renderProducts(Array.isArray(products) ? products : []);
+  } catch (e) {
+    document.getElementById('products-body').innerHTML =
+      '<tr><td colspan="7" style="text-align:center;color:#ff6b6b;">Yüklenemedi.</td></tr>';
+  }
+}
+
+function renderProducts(list) {
+  const tbody = document.getElementById('products-body');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:rgba(255,255,255,0.3);">Henüz ürün yok.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(p => `
+    <tr>
+      <td>
+        ${p.images?.[0]
+          ? `<img src="${p.images[0]}" style="width:48px;height:48px;object-fit:cover;border-radius:2px;">`
+          : '<div style="width:48px;height:48px;background:rgba(255,255,255,0.05);"></div>'}
+      </td>
+      <td style="font-weight:500;">${p.name}</td>
+      <td style="color:rgba(255,255,255,0.4);font-size:0.85em;">${p.slug}</td>
+      <td>
+        <span class="price-edit" onclick="inlineEditPrice('${p.id}', this, ${p.price})"
+          title="Fiyatı düzenlemek için tıkla" data-price="${p.price}">
+          ${formatPrice(p.price)}
+        </span>
+      </td>
+      <td>${p.stock ?? 0}</td>
+      <td>
+        <label class="toggle" title="${p.active ? 'Aktif — pasife almak için tıkla' : 'Pasif — aktifleştirmek için tıkla'}">
+          <input type="checkbox" ${p.active ? 'checked' : ''}
+            onchange="toggleActive('${p.id}', this.checked)">
+          <span class="toggle__slider"></span>
+        </label>
+      </td>
+      <td>
+        <button onclick="openEditModal(${JSON.stringify(p).replace(/"/g,'&quot;')})"
+          style="background:none;border:1px solid rgba(200,169,110,0.4);color:#c8a96e;padding:6px 12px;cursor:pointer;font-family:'Sneak',sans-serif;font-size:0.8em;margin-right:6px;">
+          Düzenle
+        </button>
+        <button onclick="deleteProduct('${p.id}', '${p.name.replace(/'/g,"\\\'")}')"
+          style="background:none;border:1px solid rgba(255,100,100,0.3);color:rgba(255,100,100,0.7);padding:6px 12px;cursor:pointer;font-family:'Sneak',sans-serif;font-size:0.8em;">
+          Sil
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// Inline price edit
+function inlineEditPrice(id, el, currentPrice) {
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.value = currentPrice;
+  input.step = '0.01';
+  input.min = '0';
+  input.style.cssText = 'width:90px;background:#0f0e0d;border:1px solid #c8a96e;color:#fff;padding:4px 8px;font-family:\'Sneak\',sans-serif;font-size:0.9em;';
+
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+
+  async function commit() {
+    const newPrice = parseFloat(input.value);
+    if (isNaN(newPrice) || newPrice < 0) {
+      input.replaceWith(el);
+      return;
+    }
+    try {
+      await AdminAPI.put(`/api/products?id=${id}`, { price: newPrice });
+      el.textContent = formatPrice(newPrice);
+      el.dataset.price = newPrice;
+      input.replaceWith(el);
+      showToast('Fiyat güncellendi');
+    } catch {
+      input.replaceWith(el);
+      showToast('Hata: güncellenemedi', 'error');
+    }
+  }
+
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') commit();
+    if (e.key === 'Escape') input.replaceWith(el);
+  });
+}
+
+async function toggleActive(id, active) {
+  try {
+    await AdminAPI.put(`/api/products?id=${id}`, { active });
+    showToast(active ? 'Ürün aktifleştirildi' : 'Ürün pasife alındı');
+  } catch {
+    showToast('Hata oluştu', 'error');
+  }
+}
+
+async function deleteProduct(id, name) {
+  if (!confirm(`"${name}" ürününü silmek istediğinize emin misiniz?`)) return;
+  try {
+    await AdminAPI.delete(`/api/products?id=${id}`);
+    showToast('Ürün silindi');
+    loadProducts();
+  } catch {
+    showToast('Silinemedi', 'error');
+  }
+}
+
+function openAddModal() {
+  editingProduct = null;
+  existingImages = [];
+  document.getElementById('modal-title').textContent = 'Yeni Ürün';
+  document.getElementById('product-form').reset();
+  document.getElementById('product-id').value = '';
+  document.getElementById('current-images').innerHTML = '';
+  document.getElementById('p-active').checked = true;
+  document.getElementById('product-form-error').style.display = 'none';
+  document.getElementById('product-modal').style.display = 'block';
+}
+
+function openEditModal(product) {
+  editingProduct = product;
+  existingImages = product.images || [];
+
+  document.getElementById('modal-title').textContent = 'Ürünü Düzenle';
+  document.getElementById('product-id').value    = product.id;
+  document.getElementById('p-name').value        = product.name || '';
+  document.getElementById('p-slug').value        = product.slug || '';
+  document.getElementById('p-subtitle').value    = product.subtitle || '';
+  document.getElementById('p-price').value       = product.price || '';
+  document.getElementById('p-stock').value       = product.stock ?? 0;
+  document.getElementById('p-description').value = product.description || '';
+  document.getElementById('p-category').value    = product.category || '';
+  document.getElementById('p-active').checked    = product.active !== false;
+  document.getElementById('product-form-error').style.display = 'none';
+
+  const imgContainer = document.getElementById('current-images');
+  imgContainer.innerHTML = existingImages.map((src, i) => `
+    <div style="position:relative;">
+      <img src="${src}" style="width:64px;height:64px;object-fit:cover;">
+      <button type="button" onclick="removeExistingImage(${i})"
+        style="position:absolute;top:-6px;right:-6px;background:#c0392b;border:none;color:#fff;
+               width:18px;height:18px;font-size:11px;cursor:pointer;border-radius:50%;line-height:18px;padding:0;">✕</button>
+    </div>
+  `).join('');
+
+  document.getElementById('product-modal').style.display = 'block';
+}
+
+function removeExistingImage(index) {
+  existingImages.splice(index, 1);
+  const imgContainer = document.getElementById('current-images');
+  imgContainer.innerHTML = existingImages.map((src, i) => `
+    <div style="position:relative;">
+      <img src="${src}" style="width:64px;height:64px;object-fit:cover;">
+      <button type="button" onclick="removeExistingImage(${i})"
+        style="position:absolute;top:-6px;right:-6px;background:#c0392b;border:none;color:#fff;
+               width:18px;height:18px;font-size:11px;cursor:pointer;border-radius:50%;line-height:18px;padding:0;">✕</button>
+    </div>
+  `).join('');
+}
+
+function closeModal() {
+  document.getElementById('product-modal').style.display = 'none';
+}
+
+async function saveProduct(e) {
+  e.preventDefault();
+  const btn = document.getElementById('save-btn');
+  const errDiv = document.getElementById('product-form-error');
+  errDiv.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Kaydediliyor...';
+
+  try {
+    // Upload new images
+    const fileInput = document.getElementById('p-images');
+    let newImageUrls = [];
+    if (fileInput.files.length > 0) {
+      for (const file of fileInput.files) {
+        const url = await AdminAPI.uploadImage(file);
+        newImageUrls.push(url);
+      }
+    }
+
+    const images = [...existingImages, ...newImageUrls];
+    const payload = {
+      name:        document.getElementById('p-name').value.trim(),
+      slug:        document.getElementById('p-slug').value.trim(),
+      subtitle:    document.getElementById('p-subtitle').value.trim(),
+      price:       parseFloat(document.getElementById('p-price').value),
+      stock:       parseInt(document.getElementById('p-stock').value) || 0,
+      description: document.getElementById('p-description').value.trim(),
+      category:    document.getElementById('p-category').value.trim(),
+      is_active:   document.getElementById('p-active').checked,
+      images,
+    };
+
+    const id = document.getElementById('product-id').value;
+    if (id) {
+      await AdminAPI.put(`/api/products?id=${id}`, payload);
+      showToast('Ürün güncellendi');
+    } else {
+      await AdminAPI.post('/api/products', payload);
+      showToast('Ürün eklendi');
+    }
+
+    closeModal();
+    loadProducts();
+  } catch (err) {
+    errDiv.textContent = err.message || 'Bir hata oluştu.';
+    errDiv.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Kaydet';
+  }
+}
+
+// Close modal on backdrop click
+document.getElementById('product-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+</body>
+</html>

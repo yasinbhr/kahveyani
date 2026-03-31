@@ -1,0 +1,206 @@
+/* ============================================
+   Kahve Yanı — Custom Overrides
+   ============================================ */
+
+/* Font: Tüm site Montserrat + Lato */
+body,
+p, li, td, input, textarea, select {
+  font-family: 'Lato', sans-serif !important;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+h1, h2, h3, h4, h5, h6,
+.text h1, .text h2, .text h3,
+.body_text h1, .body_text h2 {
+  font-family: 'Cormorant Garamond', serif !important;
+  font-weight: 300 !important;
+  letter-spacing: 0.04em !important;
+}
+
+.hero_content h1 {
+  font-family: 'Cormorant Garamond', serif !important;
+  font-weight: 600 !important;
+  font-size: 2.2rem !important;
+  letter-spacing: 0.06em !important;
+}
+
+/* Nav linkleri, butonlar, logo alanı */
+.header_nav a,
+.header_button,
+.button,
+nav a,
+.footer_nav a,
+.footer_credit {
+  font-family: 'Montserrat', sans-serif !important;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  font-size: 18px !important;
+}
+
+/* Header band yüksekliği ve ortalama */
+.header_nav-full {
+  height: 122px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Header: sabit pozisyon */
+#header {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+}
+
+/* Header band: video üzerindeyken tamamen şeffaf */
+.header_nav-full {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transition: background 0.4s ease, backdrop-filter 0.4s ease !important;
+}
+
+/* Header: scroll sonrası buzlu cam efekti */
+#header.is-scrolled .header_nav-full {
+  background: rgba(0, 0, 0, 0.15) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+/* Logo: sol hizalama ve dikey konum */
+.header_logo {
+  position: fixed !important;
+  top: 65px !important;
+  left: 55px !important;
+  right: auto !important;
+  margin: 0 !important;
+  width: auto !important;
+  z-index: 101 !important;
+}
+
+/* Logo: boyut */
+.header_logo img,
+.header_logo a img {
+  height: 40px !important;
+  width: auto !important;
+  max-width: none !important;
+  display: block !important;
+}
+
+/* Gövde metinleri: iki yana hizala + boyut */
+.body_text .text p,
+.body_text .text li {
+  text-align: justify;
+  font-size: 18px !important;
+}
+
+/* Ürünlerimiz bölümü: başlık sola, paragraf iki yana */
+.recipe_content,
+.recipe:nth-child(2n) .recipe_content {
+  text-align: left !important;
+}
+
+.recipe_content .recipe_content-summary {
+  text-align: justify !important;
+}
+
+/* Ürün kartı: açıklama alt satıra */
+.card_content_title span {
+  display: block !important;
+  margin-left: 0 !important;
+  margin-top: 4px;
+}
+
+/* Ürün fiyatlarını gizle */
+.card_content_button {
+  display: none !important;
+}
+
+/* Hover overlay: SHOP → Sepete Ekle (sistem kurulunca display:none kaldırılacak) */
+.card_media:before {
+  content: "Sepete Ekle" !important;
+  display: none !important;
+}
+
+/* Ürün kartı: hover animasyonu JS ile tetiklenir */
+a.card.-style-below.js-hover .card_content_main { opacity: .5; }
+a.card.-style-below.js-hover .card_media:before { opacity: 1 !important; }
+a.card.-style-below.js-hover .card_media:after { border-width: 30px !important; }
+
+/* Ürün kartı: focus outline kaldır */
+.cell a:focus,
+.cell a:focus-visible {
+  outline: none !important;
+}
+
+/* Mobil: logo küçük ve ortalı */
+@media (max-width: 67.49em) {
+  .header_logo {
+    position: fixed !important;
+    top: 47px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    right: auto !important;
+  }
+  .header_logo img,
+  .header_logo a img {
+    height: 28px !important;
+  }
+}
+
+/* Tablet: ürün kartı görsel yüksekliği */
+@media (min-width: 40em) and (max-width: 67.49em) {
+  .card.-style-below .card_media {
+    height: 260px !important;
+  }
+}
+
+/* Mobil menü */
+@media (max-width: 67.49em) {
+  /* Kapalıyken nav'ı gizle */
+  .header_nav-full:not(.is-open) .header_nav {
+    display: none !important;
+  }
+  /* Açıkken tam ekran koyu arka plan */
+  .header_nav-full.is-open {
+    height: 100vh !important;
+    background: rgba(0, 0, 0, 0.96) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+  .header_nav-full.is-open .header-nav_item {
+    position: static !important;
+    width: 100% !important;
+    text-align: center !important;
+    padding: 12px 0 !important;
+  }
+  .header_nav-full.is-open .header_nav ul {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 24px !important;
+    align-items: center !important;
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .header_nav-full.is-open .header_nav a {
+    font-size: 22px !important;
+    letter-spacing: 0.15em !important;
+  }
+}
+
+/* Loading overlay rengi: kiremit yerine krem */
+.overlay_first {
+  background-color: #fdf3e6 !important;
+}
+
+/* Loading overlay logosu */
+.overlay_item.overlay_middle img {
+  height: 80px;
+  width: auto;
+}

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="tr-TR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Siparişler - Kahve Yanı Admin</title>
+  <link rel="stylesheet" href="../styles/admin.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Lato:wght@300;400;700&display=swap">
+  <link rel="stylesheet" href="../styles/admin-fixes.css">
+  <link rel="icon" type="image/svg+xml" href="../assets/template/favicon.svg">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="x-supabase-url" content="https://qkuhxshusqwdqtsyknoq.supabase.co">
+  <meta name="x-supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFrdWh4c2h1c3F3ZHF0c3lrbm9xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0Njc1NzcsImV4cCI6MjA5MDA0MzU3N30.iGVeTVjE6TPHPaGjP5NPSKn0MfaU4c9rkLzmZx0rlRI">
+</head>
+<body style="background:#0f0e0d;">
+
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar__logo">
+      <img src="../assets/template/logo-kahveyani.svg" alt="Kahve Yanı" style="height:32px;width:auto;">
+    </div>
+    <nav class="admin-nav">
+      <a href="/admin/index.html" class="admin-nav__item">Genel Bakış</a>
+      <a href="/admin/products.html" class="admin-nav__item">Ürünler</a>
+      <a href="/admin/orders.html" class="admin-nav__item active">Siparişler</a>
+      <a href="../index.html" class="admin-nav__item" target="_blank">Siteye Git ↗</a>
+    </nav>
+    <button onclick="AdminAuth.signOut()" class="admin-nav__signout">Çıkış Yap</button>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-header">
+      <h1>Siparişler</h1>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select id="status-filter" onchange="filterOrders()"
+          style="background:#1a1917;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.8);
+                 padding:8px 12px;font-family:'Sneak',sans-serif;font-size:0.875em;cursor:pointer;">
+          <option value="">Tüm Siparişler</option>
+          <option value="pending">Bekliyor</option>
+          <option value="paid">Ödendi</option>
+          <option value="shipped">Kargoda</option>
+          <option value="delivered">Teslim Edildi</option>
+          <option value="cancelled">İptal</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Sipariş No</th>
+            <th>Müşteri</th>
+            <th>E-posta</th>
+            <th>Tutar</th>
+            <th>Durum</th>
+            <th>Tarih</th>
+            <th style="width:100px;">Detay</th>
+          </tr>
+        </thead>
+        <tbody id="orders-body">
+          <tr><td colspan="7" style="text-align:center;color:rgba(255,255,255,0.3);">Yükleniyor...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<!-- Order Detail Modal -->
+<div id="order-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1000;overflow-y:auto;">
+  <div style="max-width:600px;margin:40px auto;background:#1a1917;border:1px solid rgba(255,255,255,0.1);padding:32px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <h2 id="order-modal-title" style="font-family:'Dala Moa',serif;color:#c8a96e;"></h2>
+      <button onclick="closeOrderModal()"
+        style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:1.5em;cursor:pointer;padding:0;">✕</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">
+      <div>
+        <h3 style="font-family:'Sneak',sans-serif;font-size:0.75em;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.4);margin-bottom:8px;">Müşteri</h3>
+        <div id="modal-customer" style="font-family:'Sneak',sans-serif;color:rgba(255,255,255,0.85);line-height:1.6;"></div>
+      </div>
+      <div>
+        <h3 style="font-family:'Sneak',sans-serif;font-size:0.75em;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.4);margin-bottom:8px;">Teslimat Adresi</h3>
+        <div id="modal-address" style="font-family:'Sneak',sans-serif;color:rgba(255,255,255,0.85);line-height:1.6;"></div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:24px;">
+      <h3 style="font-family:'Sneak',sans-serif;font-size:0.75em;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.4);margin-bottom:12px;">Ürünler</h3>
+      <div id="modal-items"></div>
+    </div>
+
+    <div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <span style="font-family:'Sneak',sans-serif;color:rgba(255,255,255,0.5);">Toplam</span>
+      <span id="modal-total" style="font-family:'Dala Moa',serif;font-size:1.3em;color:#c8a96e;"></span>
+    </div>
+
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+      <label style="font-family:'Sneak',sans-serif;font-size:0.875em;color:rgba(255,255,255,0.6);">Durum:</label>
+      <select id="modal-status"
+        style="background:#0f0e0d;border:1px solid rgba(255,255,255,0.2);color:#fff;
+               padding:8px 12px;font-family:'Sneak',sans-serif;font-size:0.875em;flex:1;">
+        <option value="pending">Bekliyor</option>
+        <option value="paid">Ödendi</option>
+        <option value="shipped">Kargoda</option>
+        <option value="delivered">Teslim Edildi</option>
+        <option value="cancelled">İptal</option>
+      </select>
+      <button class="btn-primary" onclick="updateOrderStatus()" id="update-status-btn"
+        style="padding:10px 20px;font-size:0.875em;">
+        Güncelle
+      </button>
+    </div>
+
+    <div id="modal-iyzico" style="margin-top:16px;color:rgba(255,255,255,0.3);font-family:'Sneak',sans-serif;font-size:0.8em;"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="admin.js"></script>
+<script>
+const STATUS_LABELS = {
+  pending:   'Bekliyor',
+  paid:      'Ödendi',
+  shipped:   'Kargoda',
+  delivered: 'Teslim Edildi',
+  cancelled: 'İptal',
+};
+
+let allOrders = [];
+let currentOrderId = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await AdminAuth.requireAuth();
+  loadOrders();
+});
+
+async function loadOrders() {
+  try {
+    const data = await AdminAPI.get('/api/orders');
+    allOrders = Array.isArray(data) ? data : [];
+    allOrders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    renderOrders(allOrders);
+  } catch (e) {
+    document.getElementById('orders-body').innerHTML =
+      '<tr><td colspan="7" style="text-align:center;color:#ff6b6b;">Yüklenemedi.</td></tr>';
+  }
+}
+
+function filterOrders() {
+  const status = document.getElementById('status-filter').value;
+  const filtered = status ? allOrders.filter(o => o.status === status) : allOrders;
+  renderOrders(filtered);
+}
+
+function renderOrders(list) {
+  const tbody = document.getElementById('orders-body');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:rgba(255,255,255,0.3);">Sipariş bulunamadı.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(o => `
+    <tr>
+      <td style="font-family:monospace;font-size:0.85em;">${o.id.substring(0,8).toUpperCase()}</td>
+      <td>${o.customer_name || '—'}</td>
+      <td style="color:rgba(255,255,255,0.5);font-size:0.875em;">${o.customer_email || '—'}</td>
+      <td>${formatPrice(o.total)}</td>
+      <td><span class="status-badge -${o.status}">${STATUS_LABELS[o.status] || o.status}</span></td>
+      <td style="color:rgba(255,255,255,0.5);font-size:0.85em;">${formatDate(o.created_at)}</td>
+      <td>
+        <button onclick="openOrderModal(${JSON.stringify(o).replace(/"/g,'&quot;')})"
+          style="background:none;border:1px solid rgba(200,169,110,0.4);color:#c8a96e;
+                 padding:6px 12px;cursor:pointer;font-family:'Sneak',sans-serif;font-size:0.8em;">
+          Görüntüle
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openOrderModal(order) {
+  currentOrderId = order.id;
+
+  document.getElementById('order-modal-title').textContent =
+    'Sipariş #' + order.id.substring(0, 8).toUpperCase();
+
+  const addr = order.shipping_address || {};
+  document.getElementById('modal-customer').innerHTML = `
+    ${order.customer_name || '—'}<br>
+    ${order.customer_email || ''}<br>
+    ${order.customer_phone || ''}
+  `;
+  document.getElementById('modal-address').innerHTML = `
+    ${addr.address || '—'}<br>
+    ${addr.district ? addr.district + ', ' : ''}${addr.city || ''}
+  `;
+
+  const items = Array.isArray(order.items) ? order.items : [];
+  document.getElementById('modal-items').innerHTML = items.length
+    ? items.map(i => `
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-family:'Sneak',sans-serif;font-size:0.875em;">
+          <span style="color:rgba(255,255,255,0.8);">${i.name} × ${i.quantity}</span>
+          <span style="color:#c8a96e;">${formatPrice(i.price * i.quantity)}</span>
+        </div>
+      `).join('')
+    : '<p style="color:rgba(255,255,255,0.3);font-family:\'Sneak\',sans-serif;font-size:0.875em;">Ürün bilgisi yok.</p>';
+
+  document.getElementById('modal-total').textContent = formatPrice(order.total);
+  document.getElementById('modal-status').value = order.status || 'pending';
+
+  if (order.iyzico_payment_id) {
+    document.getElementById('modal-iyzico').textContent = 'iyzico Ödeme ID: ' + order.iyzico_payment_id;
+  } else {
+    document.getElementById('modal-iyzico').textContent = '';
+  }
+
+  document.getElementById('order-modal').style.display = 'block';
+}
+
+function closeOrderModal() {
+  document.getElementById('order-modal').style.display = 'none';
+  currentOrderId = null;
+}
+
+async function updateOrderStatus() {
+  if (!currentOrderId) return;
+  const btn = document.getElementById('update-status-btn');
+  const status = document.getElementById('modal-status').value;
+  btn.disabled = true;
+  btn.textContent = 'Güncelleniyor...';
+
+  try {
+    await AdminAPI.put(`/api/orders?id=${currentOrderId}`, { status });
+    // Update local data
+    const order = allOrders.find(o => o.id === currentOrderId);
+    if (order) order.status = status;
+    renderOrders(document.getElementById('status-filter').value
+      ? allOrders.filter(o => o.status === document.getElementById('status-filter').value)
+      : allOrders);
+    showToast('Sipariş durumu güncellendi');
+    closeOrderModal();
+  } catch (err) {
+    showToast('Hata: ' + (err.message || 'güncellenemedi'), 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Güncelle';
+  }
+}
+
+// Close modal on backdrop click
+document.getElementById('order-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeOrderModal();
+});
+</script>
+</body>
+</html>

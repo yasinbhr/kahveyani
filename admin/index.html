@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="tr-TR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Dashboard - Kahve Yanı Admin</title>
+  <link rel="stylesheet" href="../styles/admin.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Lato:wght@300;400;700&display=swap">
+  <link rel="stylesheet" href="../styles/admin-fixes.css">
+  <link rel="icon" type="image/svg+xml" href="../assets/template/favicon.svg">
+  <meta name="robots" content="noindex,nofollow">
+  <!-- Set your Supabase credentials here -->
+  <meta name="x-supabase-url" content="https://qkuhxshusqwdqtsyknoq.supabase.co">
+  <meta name="x-supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFrdWh4c2h1c3F3ZHF0c3lrbm9xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0Njc1NzcsImV4cCI6MjA5MDA0MzU3N30.iGVeTVjE6TPHPaGjP5NPSKn0MfaU4c9rkLzmZx0rlRI">
+</head>
+<body style="background:#0f0e0d;">
+
+<div class="admin-layout">
+  <!-- Sidebar -->
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar__logo">
+      <img src="../assets/template/logo-kahveyani.svg" alt="Kahve Yanı" style="height:32px;width:auto;">
+    </div>
+    <nav class="admin-nav">
+      <a href="/admin/index.html" class="admin-nav__item active">Genel Bakış</a>
+      <a href="/admin/products.html" class="admin-nav__item">Ürünler</a>
+      <a href="/admin/orders.html" class="admin-nav__item">Siparişler</a>
+      <a href="../index.html" class="admin-nav__item" target="_blank">Siteye Git ↗</a>
+    </nav>
+    <button onclick="AdminAuth.signOut()" class="admin-nav__signout">Çıkış Yap</button>
+  </aside>
+
+  <!-- Main -->
+  <main class="admin-main">
+    <div class="admin-header">
+      <h1>Genel Bakış</h1>
+      <span id="admin-user" style="color:rgba(255,255,255,0.4);font-family:'Sneak',sans-serif;font-size:0.85em;"></span>
+    </div>
+
+    <div class="admin-stats" id="stats-grid">
+      <div class="admin-stat-card">
+        <div class="admin-stat-card__value" id="stat-products">—</div>
+        <div class="admin-stat-card__label">Toplam Ürün</div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-card__value" id="stat-pending">—</div>
+        <div class="admin-stat-card__label">Bekleyen Sipariş</div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-card__value" id="stat-orders">—</div>
+        <div class="admin-stat-card__label">Toplam Sipariş</div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-card__value" id="stat-revenue">—</div>
+        <div class="admin-stat-card__label">Toplam Gelir</div>
+      </div>
+    </div>
+
+    <div style="margin-top:40px;">
+      <h2 style="font-family:'Dala Moa',serif;font-size:1.2em;color:rgba(255,255,255,0.9);margin-bottom:20px;">Son Siparişler</h2>
+      <div class="admin-table-wrap">
+        <table class="admin-table" id="recent-orders">
+          <thead>
+            <tr>
+              <th>Sipariş No</th>
+              <th>Müşteri</th>
+              <th>Tutar</th>
+              <th>Durum</th>
+              <th>Tarih</th>
+            </tr>
+          </thead>
+          <tbody id="recent-orders-body">
+            <tr><td colspan="5" style="text-align:center;color:rgba(255,255,255,0.3);">Yükleniyor...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="admin.js"></script>
+<script>
+const STATUS_LABELS = {
+  pending:   'Bekliyor',
+  paid:      'Ödendi',
+  shipped:   'Kargoda',
+  delivered: 'Teslim Edildi',
+  cancelled: 'İptal',
+};
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const session = await AdminAuth.requireAuth();
+  if (!session) return;
+
+  document.getElementById('admin-user').textContent = session.user.email;
+
+  try {
+    const [products, orders] = await Promise.all([
+      AdminAPI.get('/api/products'),
+      AdminAPI.get('/api/orders'),
+    ]);
+
+    const productList = Array.isArray(products) ? products : [];
+    const orderList   = Array.isArray(orders)   ? orders   : [];
+
+    const pending = orderList.filter(o => o.status === 'pending').length;
+    const revenue = orderList.filter(o => o.status !== 'cancelled').reduce((s, o) => s + parseFloat(o.total || 0), 0);
+
+    document.getElementById('stat-products').textContent = productList.length;
+    document.getElementById('stat-pending').textContent  = pending;
+    document.getElementById('stat-orders').textContent   = orderList.length;
+    document.getElementById('stat-revenue').textContent  = formatPrice(revenue);
+
+    const recent = [...orderList].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 10);
+    document.getElementById('recent-orders-body').innerHTML = recent.length
+      ? recent.map(o => `
+          <tr>
+            <td><a href="/admin/orders.html" style="color:#c8a96e;">${o.id.substring(0,8).toUpperCase()}</a></td>
+            <td>${o.customer_name || '—'}</td>
+            <td>${formatPrice(o.total)}</td>
+            <td><span class="status-badge -${o.status}">${STATUS_LABELS[o.status] || o.status}</span></td>
+            <td>${formatDate(o.created_at)}</td>
+          </tr>
+        `).join('')
+      : '<tr><td colspan="5" style="text-align:center;color:rgba(255,255,255,0.3);">Henüz sipariş yok.</td></tr>';
+
+  } catch (err) {
+    console.error(err);
+  }
+});
+</script>
+</body>
+</html>
